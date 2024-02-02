@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToDo</title>
+  <style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to right bottom, #a18cd1, #fbc2eb);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  background-color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  height: 300px;
+}
+
+.day {
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #555;
+  transition: background-color 0.3s ease;
+}
+
+.today {
+  background-color: #61dafb;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.day:hover {
+  background-color: #e0e0e0;
+}
+
+.popup {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  z-index: 2;
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+#todoList {
+  margin-top: 20px;
+  max-width: 400px;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#list {
+  list-style-type: none;
+  padding: 0;
+}
+
+#list li {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+#list li.marked {
+  background-color: #f48fb1;
+}
+
+.action-buttons button {
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.action-buttons button:hover {
+  background-color: #1565c0;
+}
+
+.navigation-buttons {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: auto;
+}
+
+.navigation-buttons button {
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: auto;
+}
+
+.navigation-buttons button:hover {
+  background-color: #1565c0;
+}
+
+#currentMonth {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+#clearButton {
+  background-color: #e91e63;
+  color: #fff;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+#clearButton:hover {
+  background-color: #d81b60;
+}
+
+  </style>
+</head>
+<body>
+
+<div class="navigation-buttons">
+  <button onclick="showPreviousMonth()">이전달</button>
+  <span id="currentMonth"></span>
+  <button onclick="showNextMonth()">다음달</button>
+</div>
+
+<div id="calendar"></div>
+
+<div id="popup" class="popup">
+  <h2>일정 추가</h2>
+  <label for="todo">할일:</label>
+  <input type="text" id="todo">
+  <label for="time">시간:</label>
+  <input type="time" id="time">
+  <button onclick="addTodo()">추가</button>
+  <button onclick="closePopup()">닫기</button>
+</div>
+
+<div id="overlay" class="overlay" onclick="closePopup()"></div>
+
+<!-- 할일 리스트를 표시할 부분 -->
+<div id="todoList">
+  <h2>할일 목록</h2>
+  <ul id="list"></ul>
+  <!-- 추가된 부분: 할일 목록 클리어 버튼 -->
+  <button id="clearButton" onclick="clearTodoList()">할일 목록 클리어</button>
+</div>
+
+<script>
+  let selectedDay;
+  let todoList = [];
+  let today = new Date();
+  createCalendar(today.getFullYear(), today.getMonth());
+
+  function addTodo() {
+    const todoInput = document.getElementById('todo');
+    const timeInput = document.getElementById('time');
+    const todo = todoInput.value;
+    const time = timeInput.value;
+
+    if (todo.trim() !== '') {
+      const todoItem = {
+        day: selectedDay,
+        todo: todo,
+        time: time
+      };
+
+      todoList.push(todoItem);
+      updateTodoList();
+      closePopup();
+      todoInput.value = '';
+    } else {
+      alert('일정을 입력하세요.');
+    }
+  }
+
+  function editTodoItem(index) {
+    const todoItem = todoList[index];
+    const newTodo = prompt(`수정할 내용을 입력하세요:`, todoItem.todo);
+
+    if (newTodo !== null) {
+      todoItem.todo = newTodo;
+      updateTodoList();
+    }
+  }
+
+  function deleteTodoItem(index) {
+    const confirmDelete = confirm('정말로 삭제하시겠습니까?');
+
+    if (confirmDelete) {
+      todoList.splice(index, 1);
+      updateTodoList();
+    }
+  }
+
+  function createCalendar(year, month) {
+    const calendarDiv = document.getElementById('calendar');
+    calendarDiv.innerHTML = '';
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    document.getElementById('currentMonth').innerText = `${year}년 ${month + 1}월`;
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayDiv = document.createElement('div');
+      dayDiv.classList.add('day');
+
+      // 추가된 부분: 오늘 날짜에 파스텔 노란색으로 표시
+      if (i === today.getDate() && year === today.getFullYear() && month === today.getMonth()) {
+        dayDiv.classList.add('today');
+      }
+
+      dayDiv.textContent = i;
+      dayDiv.addEventListener('click', () => openPopup(i));
+      calendarDiv.appendChild(dayDiv);
+    }
+  }
+
+  function openPopup(day) {
+    const popup = document.getElementById('popup');
+    const overlay = document.getElementById('overlay');
+    popup.style.display = 'block';
+    overlay.style.display = 'block';
+    selectedDay = day;
+    updateCalendar(); // 추가된 부분: 팝업이 열릴 때마다 달력 업데이트
+  }
+
+  function closePopup() {
+    const popup = document.getElementById('popup');
+    const overlay = document.getElementById('overlay');
+    popup.style.display = 'none';
+    overlay.style.display = 'none';
+    document.getElementById('todo').value = '';
+    document.getElementById('time').value = '';
+    updateCalendar(); // 추가된 부분: 팝업이 닫힐 때마다 달력 업데이트
+  }
+
+  function updateTodoList() {
+    const listElement = document.getElementById('list');
+    listElement.innerHTML = '';
+
+    for (let i = 0; i < todoList.length; i++) {
+      const listItem = document.createElement('li');
+      
+      // 수정된 부분: 할일을 저장한 날짜에 분홍색으로 표시
+      const dateInfo = new Date(today.getFullYear(), today.getMonth(), todoList[i].day);
+      const month = dateInfo.getMonth() + 1; // 월은 0부터 시작하므로 1을 더함
+      const day = dateInfo.getDate();
+      
+      listItem.textContent = `${month}월 ${day}일 - ${todoList[i].todo} (${todoList[i].time})`;
+
+      const editButton = document.createElement('button');
+      editButton.textContent = '수정';
+      editButton.addEventListener('click', () => editTodoItem(i));
+
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = '삭제';
+      deleteButton.addEventListener('click', () => deleteTodoItem(i));
+
+      const actionButtons = document.createElement('div');
+      actionButtons.classList.add('action-buttons');
+      actionButtons.appendChild(editButton);
+      actionButtons.appendChild(deleteButton);
+
+      listItem.appendChild(actionButtons);
+      listElement.appendChild(listItem);
+    }
+    updateCalendar(); // 추가된 부분: 할일 목록이 업데이트되면 달력도 업데이트
+  }
+
+  // 추가된 부분: 달력 업데이트 함수
+  function updateCalendar() {
+    const dayDivs = document.querySelectorAll('.day');
+    dayDivs.forEach((dayDiv, index) => {
+      if (index + 1 === selectedDay) {
+      dayDiv.classList.add('marked');
+    } else {
+      dayDiv.classList.remove('marked');
+    }
+  });
+}
+
+
+  // 추가된 부분: 할일 목록 클리어 함수
+  function clearTodoList() {
+    const confirmClear = confirm('할일 목록을 모두 지우시겠습니까?');
+    if (confirmClear) {
+      todoList = [];
+      updateTodoList();
+    }
+  }
+
+  function showPreviousMonth() {
+    today.setMonth(today.getMonth() - 1);
+    createCalendar(today.getFullYear(), today.getMonth());
+  }
+
+  function showNextMonth() {
+    today.setMonth(today.getMonth() + 1);
+    createCalendar(today.getFullYear(), today.getMonth());
+  }
+</script>
+
+</body>
+</html>
